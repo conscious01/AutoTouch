@@ -1,8 +1,5 @@
 package com.zhang.autotouch;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -10,11 +7,16 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.zhang.autotouch.fw_permission.FloatWinPermissionCompat;
 import com.zhang.autotouch.service.AutoTouchService;
 import com.zhang.autotouch.service.FloatingService;
 import com.zhang.autotouch.utils.AccessibilityUtil;
 import com.zhang.autotouch.utils.ToastUtil;
+
+import java.lang.reflect.Field;
 
 
 @SuppressLint("SetTextI18n")
@@ -75,7 +77,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void requestAcccessibility() {
-        new AlertDialog.Builder(this).setTitle("无障碍服务未开启")
+        AlertDialog alertDialog=  new AlertDialog.Builder(this).setTitle("无障碍服务未开启")
                 .setMessage("你的手机没有开启无障碍服务，" + getString(R.string.app_name) + "将无法正常使用")
                 .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
                     @Override
@@ -89,13 +91,42 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .setNegativeButton("取消", null).show();
+
+        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextSize(20);
+        alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextSize(20);
+
+        try {
+            //获取mAlert对象
+            Field mAlert = AlertDialog.class.getDeclaredField("mAlert");
+            mAlert.setAccessible(true);
+            Object mAlertController = mAlert.get(alertDialog);
+
+            //获取mTitleView并设置大小颜色
+            Field mTitle = mAlertController.getClass().getDeclaredField("mTitleView");
+            mTitle.setAccessible(true);
+            TextView mTitleView = (TextView) mTitle.get(mAlertController);
+            mTitleView.setTextSize(40);
+
+            //获取mMessageView并设置大小颜色
+            Field mMessage = mAlertController.getClass().getDeclaredField("mMessageView");
+            mMessage.setAccessible(true);
+            TextView mMessageView = (TextView) mMessage.get(mAlertController);
+            mMessageView.setTextSize(20);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+
+
+
     }
 
     /**
      * 开启悬浮窗权限
      */
     private void requestPermissionAndShow() {
-        new AlertDialog.Builder(this).setTitle("悬浮窗权限未开启")
+        AlertDialog alertDialog= new AlertDialog.Builder(this).setTitle("悬浮窗权限未开启")
                 .setMessage(getString(R.string.app_name) + "获得悬浮窗权限，才能正常使用应用")
                 .setPositiveButton("去开启", new DialogInterface.OnClickListener() {
                     @Override
@@ -109,5 +140,33 @@ public class MainActivity extends AppCompatActivity {
                     }
                 })
                 .setNegativeButton("取消", null).show();
+
+
+        alertDialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextSize(20);
+        alertDialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextSize(20);
+
+        try {
+            //获取mAlert对象
+            Field mAlert = AlertDialog.class.getDeclaredField("mAlert");
+            mAlert.setAccessible(true);
+            Object mAlertController = mAlert.get(alertDialog);
+
+            //获取mTitleView并设置大小颜色
+            Field mTitle = mAlertController.getClass().getDeclaredField("mTitleView");
+            mTitle.setAccessible(true);
+            TextView mTitleView = (TextView) mTitle.get(mAlertController);
+            mTitleView.setTextSize(40);
+
+            //获取mMessageView并设置大小颜色
+            Field mMessage = mAlertController.getClass().getDeclaredField("mMessageView");
+            mMessage.setAccessible(true);
+            TextView mMessageView = (TextView) mMessage.get(mAlertController);
+            mMessageView.setTextSize(20);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        }
+
     }
 }

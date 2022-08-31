@@ -4,7 +4,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.util.Log;
 import android.view.View;
-import android.view.WindowManager;
+import android.view.WindowManager.LayoutParams;
 import android.widget.Button;
 
 import androidx.annotation.NonNull;
@@ -15,8 +15,8 @@ import com.zhang.autotouch.R;
 import com.zhang.autotouch.TouchEventManager;
 import com.zhang.autotouch.adapter.TouchPointAdapter;
 import com.zhang.autotouch.bean.TouchEvent;
+import com.zhang.autotouch.bean.TouchEventAll;
 import com.zhang.autotouch.bean.TouchPoint;
-import com.zhang.autotouch.utils.DensityUtil;
 import com.zhang.autotouch.utils.DialogUtils;
 import com.zhang.autotouch.utils.GsonUtils;
 import com.zhang.autotouch.utils.SpUtils;
@@ -45,12 +45,14 @@ public class MenuDialog extends BaseServiceDialog implements View.OnClickListene
 
     @Override
     protected int getWidth() {
-        return DensityUtil.dip2px(getContext(), 350);
+        return LayoutParams.MATCH_PARENT;
+
+//        return DensityUtil.dip2px(getContext(), 350);
     }
 
     @Override
     protected int getHeight() {
-        return WindowManager.LayoutParams.WRAP_CONTENT;
+        return LayoutParams.WRAP_CONTENT;
     }
 
     @Override
@@ -59,6 +61,11 @@ public class MenuDialog extends BaseServiceDialog implements View.OnClickListene
         findViewById(R.id.bt_exit).setOnClickListener(this);
         findViewById(R.id.bt_add).setOnClickListener(this);
         findViewById(R.id.bt_record).setOnClickListener(this);
+        findViewById(R.id.btn_run_all).setOnClickListener(this);
+        findViewById(R.id.btn_end_all).setOnClickListener(this);
+        findViewById(R.id.btn_delete_all).setOnClickListener(this);
+
+
         btStop = findViewById(R.id.bt_stop);
         btStop.setOnClickListener(this);
         rvPoints = findViewById(R.id.rv);
@@ -116,7 +123,7 @@ public class MenuDialog extends BaseServiceDialog implements View.OnClickListene
                 dismiss();
                 if (listener != null) {
                     listener.onFloatWindowAttachChange(false);
-                    if (recordDialog ==null) {
+                    if (recordDialog == null) {
                         recordDialog = new RecordDialog(getContext());
                         recordDialog.setOnDismissListener(new OnDismissListener() {
                             @Override
@@ -141,6 +148,29 @@ public class MenuDialog extends BaseServiceDialog implements View.OnClickListene
                 }
                 break;
 
+            case R.id.btn_run_all:
+                List<TouchPoint> touchPoints = SpUtils.getTouchPoints(getContext());
+                for (int i = 0; i < touchPoints.size(); i++) {
+                    System.out.println(
+                            "第" + i + "个" + "，名字是：" + touchPoints.get(i).getName() + "，延迟时间："
+                                    + touchPoints.get(i).getDelay() + "秒");
+                }
+                dismiss();
+                TouchEventAll touchEventAll = new TouchEventAll();
+                touchEventAll.setTouchPointList(touchPoints);
+                TouchEvent.postAllAction(touchEventAll);
+
+                break;
+            case R.id.btn_end_all:
+                TouchEvent.postStopAllAction();
+
+                break;
+            case R.id.btn_delete_all:
+                //todo 删除所有点
+                SpUtils.clear(getContext());
+                touchPointAdapter.setTouchPointList(null);
+                break;
+
         }
     }
 
@@ -149,8 +179,10 @@ public class MenuDialog extends BaseServiceDialog implements View.OnClickListene
     }
 
     public interface Listener {
+
         /**
          * 悬浮窗显示状态变化
+         *
          * @param attach
          */
         void onFloatWindowAttachChange(boolean attach);

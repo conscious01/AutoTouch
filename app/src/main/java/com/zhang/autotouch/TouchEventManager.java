@@ -1,12 +1,6 @@
 package com.zhang.autotouch;
 
-import android.widget.Button;
-
 import com.zhang.autotouch.bean.TouchEvent;
-
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
 
 public class TouchEventManager {
 

@@ -12,6 +12,8 @@ public class TouchEvent {
     public static final int ACTION_PAUSE = 2;
     public static final int ACTION_CONTINUE = 3;
     public static final int ACTION_STOP = 4;
+    public static final int ACTION_STOP_ALL = 404;
+
 
     private int action;
     private TouchPoint touchPoint;
@@ -41,6 +43,10 @@ public class TouchEvent {
         postAction(new TouchEvent(ACTION_START, touchPoint));
     }
 
+    public static void postAllAction(TouchEventAll touchPoint) {
+        EventBus.getDefault().post(touchPoint);
+    }
+
     public static void postPauseAction() {
         postAction(new TouchEvent(ACTION_PAUSE));
     }
@@ -51,6 +57,10 @@ public class TouchEvent {
 
     public static void postStopAction() {
         postAction(new TouchEvent(ACTION_STOP));
+    }
+
+    public static void postStopAllAction() {
+        postAction(new TouchEvent(ACTION_STOP_ALL));
     }
 
     private static void postAction(TouchEvent touchEvent) {

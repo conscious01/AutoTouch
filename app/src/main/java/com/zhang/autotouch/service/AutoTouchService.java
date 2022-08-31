@@ -14,23 +14,26 @@ import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.TextView;
 
-import org.greenrobot.eventbus.EventBus;
-import org.greenrobot.eventbus.Subscribe;
-import org.greenrobot.eventbus.ThreadMode;
-
 import androidx.annotation.RequiresApi;
 
 import com.zhang.autotouch.R;
 import com.zhang.autotouch.TouchEventManager;
 import com.zhang.autotouch.bean.TouchEvent;
+import com.zhang.autotouch.bean.TouchEventAll;
 import com.zhang.autotouch.bean.TouchPoint;
 import com.zhang.autotouch.utils.DensityUtil;
 import com.zhang.autotouch.utils.WindowUtils;
 
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import java.text.DecimalFormat;
+import java.util.List;
 
 /**
  * 无障碍服务-自动点击
+ *
  * @date 2019/9/6 16:23
  */
 @RequiresApi(api = Build.VERSION_CODES.N)
@@ -82,7 +85,30 @@ public class AutoTouchService extends AccessibilityService {
                 removeTouchView();
                 autoTouchPoint = null;
                 break;
+            case TouchEvent.ACTION_STOP_ALL:
+                handler.removeCallbacks(serRunnable);
+                removeTouchView();
+                serRunnable = null;
+                break;
         }
+    }
+
+
+    List<TouchPoint> touchPoints;
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onAllActions(TouchEventAll touchEventAll) {
+        touchPoints = touchEventAll.getTouchPointList();
+        Log.d(TAG, "onReciverTouchEvent: " + touchPoints);
+        for (int i = 0; i < touchPoints.size(); i++) {
+            System.out.println(
+                    "第" + i + "个" + "，名字是：" + touchPoints.get(i).getName() + "，延迟时间："
+                            + touchPoints.get(i).getDelay() + "秒");
+        }
+        nowPosition = 0;
+        nowTouchPoint = touchPoints.get(nowPosition);
+        handler.postDelayed(serRunnable, nowTouchPoint.getDelay() * 1000L);
+        showTouchView();
     }
 
     /**
@@ -98,18 +124,20 @@ public class AutoTouchService extends AccessibilityService {
     private Runnable autoTouchRunnable = new Runnable() {
         @Override
         public void run() {
-            Log.d(TAG, "onAutoClick: " + "x=" + autoTouchPoint.getX() + " y=" + autoTouchPoint.getY());
+            Log.d(TAG,
+                    "onAutoClick: " + "x=" + autoTouchPoint.getX() + " y=" + autoTouchPoint.getY());
             Path path = new Path();
             path.moveTo(autoTouchPoint.getX(), autoTouchPoint.getY());
             GestureDescription.Builder builder = new GestureDescription.Builder();
             GestureDescription gestureDescription = builder.addStroke(
                     new GestureDescription.StrokeDescription(path, 0, 100))
                     .build();
-            dispatchGesture(gestureDescription, new AccessibilityService.GestureResultCallback() {
+            dispatchGesture(gestureDescription, new GestureResultCallback() {
                 @Override
                 public void onCompleted(GestureDescription gestureDescription) {
                     super.onCompleted(gestureDescription);
                     Log.d("AutoTouchService", "滑动结束" + gestureDescription.getStrokeCount());
+
                 }
 
                 @Override
@@ -118,9 +146,53 @@ public class AutoTouchService extends AccessibilityService {
                     Log.d("AutoTouchService", "滑动取消");
                 }
             }, null);
-            onAutoClick();
+//            onAutoClick();
         }
     };
+
+
+    private TouchPoint nowTouchPoint;
+    int nowPosition;
+
+    private Runnable serRunnable = new Runnable() {
+        @Override
+        public void run() {
+            Log.d(TAG,
+                    "onAutoClick: " + "x=" + nowTouchPoint.getX() + " y=" + nowTouchPoint.getY());
+            Path path = new Path();
+            path.moveTo(nowTouchPoint.getX(), nowTouchPoint.getY());
+            GestureDescription.Builder builder = new GestureDescription.Builder();
+            GestureDescription gestureDescription = builder.addStroke(
+                    new GestureDescription.StrokeDescription(path, 0, 100))
+                    .build();
+            dispatchGesture(gestureDescription, new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gestureDescription) {
+                    super.onCompleted(gestureDescription);
+                    Log.d("AutoTouchService", "滑动结束" + gestureDescription.getStrokeCount());
+                    if (nowPosition == touchPoints.size() - 1) {
+                        //到尾部了，重新开始
+                        nowPosition = 0;
+                        nowTouchPoint = touchPoints.get(nowPosition);
+
+                    } else {
+                        //拿下一个任务继续
+                        nowPosition = nowPosition + 1;
+                        nowTouchPoint = touchPoints.get(nowPosition);
+                    }
+                    handler.postDelayed(serRunnable, nowTouchPoint.getDelay() * 1000L);
+
+                }
+
+                @Override
+                public void onCancelled(GestureDescription gestureDescription) {
+                    super.onCancelled(gestureDescription);
+                    Log.d("AutoTouchService", "滑动取消");
+                }
+            }, null);
+        }
+    };
+
 
     private long getDelayTime() {
 //        int random = (int) (Math.random() * (30 - 1) + 1);
@@ -129,10 +201,12 @@ public class AutoTouchService extends AccessibilityService {
     }
 
     @Override
-    public void onAccessibilityEvent(AccessibilityEvent event) { }
+    public void onAccessibilityEvent(AccessibilityEvent event) {
+    }
 
     @Override
-    public void onInterrupt() { }
+    public void onInterrupt() {
+    }
 
     @Override
     public void onDestroy() {
@@ -148,7 +222,8 @@ public class AutoTouchService extends AccessibilityService {
         if (autoTouchPoint != null) {
             //创建触摸点View
             if (tvTouchPoint == null) {
-                tvTouchPoint = (TextView) LayoutInflater.from(this).inflate(R.layout.window_touch_point, null);
+                tvTouchPoint = (TextView) LayoutInflater.from(this)
+                        .inflate(R.layout.window_touch_point, null);
             }
             //显示触摸点View
             if (windowManager != null && !tvTouchPoint.isAttachedToWindow()) {
@@ -156,14 +231,15 @@ public class AutoTouchService extends AccessibilityService {
                 int height = DensityUtil.dip2px(this, 40);
                 WindowManager.LayoutParams params = WindowUtils.newWmParams(width, height);
                 params.gravity = Gravity.START | Gravity.TOP;
-                params.x = autoTouchPoint.getX() - width/2;
+                params.x = autoTouchPoint.getX() - width / 2;
                 params.y = autoTouchPoint.getY() - width;
-                params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+                params.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                        | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                 windowManager.addView(tvTouchPoint, params);
             }
             //开启倒计时
             countDownTime = autoTouchPoint.getDelay();
-            if(touchViewRunnable == null) {
+            if (touchViewRunnable == null) {
                 touchViewRunnable = new Runnable() {
                     @Override
                     public void run() {
